@@ -61,11 +61,11 @@ def who(self,nom,nick):
         self.connexion.sendall(who_alerte.encode())
     else:
         for client in data[clients_channels[nick]["current_channel"]]:
-            #if(client["nom"] != nom):
-            if(client["nick"] in administrateur_nick[clients_channels[nick]["current_channel"]]["all_admin"]):
-                liste_des_clients =liste_des_clients+"\n@"+client["nick"]+"@"
-            else:
-                liste_des_clients =liste_des_clients+"\n"+client["nick"]
+            if(client["nom"] != nom):
+                if(administrateur_nick[clients_channels[nick]["current_channel"]]["first"] == client["nick"]):
+                    liste_des_clients =liste_des_clients+"\n@"+client["nick"]+"@"
+                else:
+                    liste_des_clients =liste_des_clients+"\n"+client["nick"]
         liste_des_clients=liste_des_clients+"\n"
         self.connexion.sendall(liste_des_clients.encode())        
 
@@ -105,8 +105,8 @@ def kill(self,commande,nom,nick):
     commande = commande.split()
     if(len(commande) != 2):
         error_commande(self)
-    elif(not(nick in administrateur_nick[clients_channels[nick]["current_channel"]]["all_admin"])):
-        commande_aministrateur_uniquement = "Calme toi t'es pas l'administrateur  de la chaine"
+    elif(administrateur_nick[clients_channels[nick]["current_channel"]]["first"] != nick):
+        commande_aministrateur_uniquement = "Calme toi t'es pas l'administrateur principale de la chaine"
         self.connexion.sendall(commande_aministrateur_uniquement.encode())
     else:
         for client in data[clients_channels[nick]["current_channel"]]:
@@ -121,12 +121,12 @@ def kill(self,commande,nom,nick):
 
                 break
 
-def kick_user(self,msgClient,nom,nick):
-    kick = msgClient.split()
-    if( not(nick in administrateur_nick[clients_channels[nick]["current_channel"]]["all_admin"])):
+def kick(self,msgClient,nom,nick):
+    if(administrateur_nick[clients_channels[nick]["current_channel"]]["first"] != nick):
         commande_aministrateur_uniquement = "Calme toi t'es pas l'administrateur du groupe"
         self.connexion.sendall(commande_aministrateur_uniquement.encode())
     else:   
+        kick = msgClient.split()
         if(len(kick) !=2):
             error_commande(self)
         elif(kick[1] == nick):
@@ -146,7 +146,7 @@ def kick_user(self,msgClient,nom,nick):
                 self.connexion.sendall(destinateur_kick_non_trouve.encode())
 
 def ren(self,msgClient,nom,nick):
-    if(not(nick in administrateur_nick[clients_channels[nick]["current_channel"]]["all_admin"])):
+    if(administrateur_nick[clients_channels[nick]["current_channel"]]["first"] != nick):
         commande_aministrateur_uniquement = "Calme toi t'es pas l'administrateur de la chaine"
         self.connexion.sendall(commande_aministrateur_uniquement.encode())
     else:
@@ -262,6 +262,8 @@ def msg_private(self,msgClient,nom,nick):
     else:
         nicks =msgClient_[0].split(";")
         msgClient = msgClient.replace(msgClient_[0],"",1)
+        print(msgClient)
+        print(msgClient_[0])
         for client in data[clients_channels[nick]["current_channel"]]:
             if client["nick"] in nicks:
                 message = "Private message %s: %s" % (nick, msgClient)
@@ -283,7 +285,7 @@ def nick_change(self,nom,nick,msgClient):
                 liste_des_nick.remove(nick)
                 liste_des_nick.append(new_nick)
                 client["nick"] = new_nick
-                clients_channels[new_nick] = clients_channels.pop(nick) 
+                clients_channels[new_nick] = clients_channels.pop(nick)	
                 break
         if(administrateur_nick[clients_channels[new_nick]["current_channel"]]["first"]==nick):
             administrateur_nick[clients_channels[new_nick]["current_channel"]]["first"]= new_nick
@@ -292,33 +294,33 @@ def nick_change(self,nom,nick,msgClient):
         nick = new_nick
 
 def grant(self,nom,nick,msgClient):
-    msgClient = msgClient.split()
-    if(len(msgClient) != 2 ):
-        error_commande(self)
-    elif(nick not in administrateur_nick[clients_channels[nick]["current_channel"]]["all_admin"] ):
-        commande_aministrateur_uniquement = "Calme toi t'es pas l'administrateur de la chaine"
-        self.connexion.sendall(commande_aministrateur_uniquement.encode())
-    else:
-        for client in data[clients_channels[nick]["current_channel"]]:
-            if client["nick"] == msgClient[1]:
-                administrateur_nick[clients_channels[nick]["current_channel"]]["all_admin"].append(msgClient[1])
-                message = "Vous avez réçu de "+nick+" les privilèges d'un administrateur "
-                client["socket"].sendall(message.encode())
+	msgClient = msgClient.split()
+	if(len(msgClient) != 2 ):
+		error_commande(self)
+	elif(administrateur_nick[clients_channels[nick]["current_channel"]]["first"] != nick):
+		commande_aministrateur_uniquement = "Calme toi t'es pas l'administrateur de la chaine"
+		self.connexion.sendall(commande_aministrateur_uniquement.encode())
+	else:
+		for client in data[clients_channels[nick]["current_channel"]]:
+			if client["nick"] == msgClient[1]:
+				administrateur_nick[clients_channels[nick]["current_channel"]]["all_admin"].append(msgClient[1])
+				message = "Vous avez réçu de "+nick+" les privilèges d'un administrateur "
+				client["socket"].sendall(message.encode())
 
 def revoke(self,nom,nick,msgClient):
-    msgClient = msgClient.split()
-    if(len(msgClient) != 2):
-        error_commande(self)
-    elif(nick not in administrateur_nick[clients_channels[nick]["current_channel"]]["all_admin"]):
-        commande_aministrateur_uniquement = "Calme toi t'es pas l'administrateur de la chaine"
-        self.connexion.sendall(commande_aministrateur_uniquement.encode())
-    else:
-        for client in data[clients_channels[nick]["current_channel"]]:
-            if client["nick"] == msgClient[1] and msgClient[1] in administrateur_nick[clients_channels[nick]["current_channel"]]["all_admin"]:
-                administrateur_nick[clients_channels[nick]["current_channel"]]["all_admin"].remove(msgClient[1])
-                message = "Oups vos privilèges d'administrateur ont été retirés par  "+nick
-                client["socket"].sendall(message.encode())
-                break
+	msgClient = msgClient.split()
+	if(len(msgClient) != 2):
+		error_commande(self)
+	elif(administrateur_nick[clients_channels[nick]["current_channel"]]["first"] != nick):
+		commande_aministrateur_uniquement = "Calme toi t'es pas l'administrateur de la chaine"
+		self.connexion.sendall(commande_aministrateur_uniquement.encode())
+	else:
+		for client in data[clients_channels[nick]["current_channel"]]:
+			if client["nick"] == msgClient[1] and msgClient[1] in administrateur_nick[clients_channels[nick]["current_channel"]]["all_admin"]:
+				administrateur_nick[clients_channels[nick]["current_channel"]]["all_admin"].remove(msgClient[1])
+				message = "Oups vos privilèges d'administrateur ont été retirés par  "+nick
+				client["socket"].sendall(message.encode())
+				break
 
 def join_v1(self,nom,nick,commande):
     commande = commande.replace("\n","")
@@ -440,13 +442,15 @@ class ThreadClient(threading.Thread):
                     bienvenue = "Bienvenue dans la chaine!\nVous pouvez communiquez avec les autres menbres.\nFaites la commande /HELP pour plus d'aides.\n"                                
                     self.connexion.sendall(bienvenue.encode())
                     break
-            while (nick in liste_des_nick ):   
+            while (nick in liste_des_nick ): 
+                print(liste_des_nick)  
                 msgClient = self.connexion.recv(1024)
                 msgClient = msgClient.decode()
                 msgClient = msgClient.replace("\n","")
                 if(nick not in liste_des_nick):
                     break
                 elif(clients_channels[nick]["actif"] == 0): 
+                    print("cccccccccc")
                     leave(self,nom,nick)
                     if not(nick in liste_des_nick):
                         break
@@ -463,7 +467,7 @@ class ThreadClient(threading.Thread):
                 elif(msgClient.startswith("MSG ")):
                     msg_private(self,msgClient,nom,nick)
                 elif(msgClient.startswith("KICK ")):
-                    kick_user(self,msgClient,nom,nick)
+                    kick(self,msgClient,nom,nick)
                 elif(msgClient.startswith("CURRENT")):
                     kick=0
                     current_channel(self,nick,nom,msgClient,kick)
