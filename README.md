@@ -3,7 +3,6 @@
 
 # Mini-Projet Réseau
 
-##### A rendre pour le 30.04.
 
 ### ─
 
